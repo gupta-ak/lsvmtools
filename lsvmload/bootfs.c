@@ -118,6 +118,7 @@ EXT2* OpenBootFS(
     Blkdev* bootdev = NULL;
     EXT2* ext2 = NULL;
 
+    LOGI(L"OpenBootFS::GetBootDevice");
     /* Get the boot device (sets globals.bootdev) */
     if (!(bootdev = GetBootDevice(
         imageHandle, 
@@ -130,6 +131,7 @@ EXT2* OpenBootFS(
     }
 
     /* Open the EXT2 file system */
+    LOGI(L"OpenBootFS::EXT2New");
     if (EXT2New(bootdev, &ext2) != EXT2_ERR_NONE)
     {
         LOGE(L"EXT2New() failed");
@@ -137,7 +139,7 @@ EXT2* OpenBootFS(
     }
 
 done:
-
+    LOGI(L"OpenBootFS::Exit");
     return ext2;
 }
 

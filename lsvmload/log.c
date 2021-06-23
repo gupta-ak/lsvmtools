@@ -34,8 +34,10 @@
 #include "paths.h"
 #include "console.h"
 #include "globals.h"
+#include <time.h>
 
 static LogLevel _logLevel = INFO;
+static time_t first = (time_t) 0;
 
 void SetLogLevel(
     LogLevel logLevel)
@@ -157,6 +159,10 @@ EFI_STATUS PutLog(
         goto done;
     }
 
+    /* set time for first log entry */
+    if (first == 0)
+       first = time(NULL);
+
     /* Format the string */
     {
         va_start(ap, format);
@@ -200,6 +206,30 @@ EFI_STATUS PutLog(
         {
             goto done;
         }
+    }
+
+    /* Write the time stamp to the log */
+    {
+	char num[32];
+	char* start = &num[sizeof(num)/sizeof(num[0])];
+	time_t t = time(NULL) - first;
+
+	// format is "[NUM]: "
+	*--start = '\0';
+	*--start = ' ';
+	*--start = ':';
+	*--start = ']';
+	do {
+		*--start = '0' + (t % 10);
+		t /= 10;
+	}
+	while (t > 0);
+	*--start = '[';	
+
+	if ((status = _WriteLog(start)) != EFI_SUCCESS)
+	{
+		goto done;
+	}
     }
 
     /* Write the string to the log */

@@ -58,12 +58,14 @@ int GetInitrdPath(
         goto done;
     }
 
+	LOGI(L"GetInitrdPath::Start");
     /* Attempt to open grub.cfg */
     if (!globals.grubcfgData)
     {
         const CHAR16 PATH1[] = L"/grub2/grub.cfg";
         const CHAR16 PATH2[] = L"/grub/grub.cfg";
 
+	LOGI(L"GetInitrdPath::LoadFileFromBootFS");
         if (LoadFileFromBootFS(
             globals.imageHandle,
             globals.tcg2Protocol,
@@ -92,6 +94,7 @@ int GetInitrdPath(
     }
 
     /* Get the initrd path from grub.cfg */
+	LOGI(L"GetInitrdPath::GRUBCfgFindInitrd");
     if (GRUBCfgFindInitrd(
         globals.grubcfgData, 
         globals.grubcfgSize, 
@@ -104,6 +107,7 @@ int GetInitrdPath(
     }
 
     rc = 0;
+	LOGI(L"GetInitrdPath::End");
 
 done:
 
@@ -126,6 +130,8 @@ int PatchInitrd(
     if (!imageHandle || !tcg2Protocol || !bootfs || !initrdPath)
         goto done;
 
+	LOGI(L"PathInitrd::Start");
+
     /* Only perform patch if rootkey is valid */
     if (globals.rootkeyValid)
     {
@@ -144,6 +150,7 @@ int PatchInitrd(
             WcsStrlcpy(wcs, initrdPath, ARRSIZE(wcs));
 
             /* Try to load the file from the bootfs */
+		LOGI(L"Patchinitrd::LoadFileFromBootFS");
             if (LoadFileFromBootFS(
                 imageHandle,
                 tcg2Protocol,
@@ -164,7 +171,8 @@ int PatchInitrd(
                 BENCH( posix_time_t t = posix_time(NULL); )
 
                 /* Inject the keys into the bootfs and remove keyboard driver */
-                if (InitrdInjectFiles(
+                LOGI(L"PatchInitrd::InitrdInjectFiles");
+		if (InitrdInjectFiles(
                     initrdData,
                     initrdSize,
                     globals.bootkeyData,
@@ -187,6 +195,7 @@ int PatchInitrd(
                     BENCH( posix_time_t t = posix_time(NULL); )
 
                     /* Remove original initrd */
+		    LOGI(L"PatchInitrd::EXT2Rm");
                     if (EXT2Rm(bootfs, initrdPath) != EXT2_ERR_NONE)
                     {
                         LOGE(L"failed to remove %s", Wcs(wcs));
@@ -198,7 +207,7 @@ int PatchInitrd(
 
                 {
                     BENCH( posix_time_t t = posix_time(NULL); )
-
+                    LOGI(L"PatchInitrd::EXT2Put");
                     /* Create new initrd */
                     if (EXT2Put(
                         bootfs, 
@@ -219,7 +228,7 @@ int PatchInitrd(
         }
     }
 
-
+	LOGI(L"PatchInitrd::End");
 
     rc = 0;
 
