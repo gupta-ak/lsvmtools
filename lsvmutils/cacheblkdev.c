@@ -170,6 +170,28 @@ done:
     return rc;
 }
 
+static int _GetN(
+    Blkdev* dev,
+    UINTN blkno,
+    UINTN nblocks,
+    void* data)
+{
+    int rc = -1;
+    BlkdevImpl* impl = (BlkdevImpl*)dev;
+
+    /* Check for null parameters */
+    if (!impl || !data || !impl->child)
+        goto done;
+
+    if (impl->child->GetN(impl->child, blkno, nblocks, data) != 0)
+	goto done;
+
+    rc = 0;
+
+done:
+    return rc;
+}
+
 static int _Put(
     Blkdev* dev,
     UINTN blkno,
@@ -212,6 +234,25 @@ done:
     return rc;
 }
 
+static int _PutN(
+    Blkdev* dev,
+    UINTN blkno,
+    UINTN nblocks,
+    const void* data)
+{
+    UINTN i;
+    const UINT8* ptr = (const UINT8*) ptr;
+
+    for (i = 0; i < nblocks; i++)
+    {
+        if (_Put(dev, blkno + i, ptr + i*BLKDEV_BLKSIZE) != 0)
+            return -1;
+    }
+
+    return 0;
+}
+
+
 static int _SetFlags(
     Blkdev* dev,
     UINT32 flags)
@@ -248,7 +289,9 @@ Blkdev* NewCacheBlkdev(
 
     impl->base.Close = _Close;
     impl->base.Get = _Get;
+    impl->base.GetN = _GetN;
     impl->base.Put = _Put;
+    impl->base.PutN = _PutN;
     impl->base.SetFlags = _SetFlags;
     impl->child = dev;
 

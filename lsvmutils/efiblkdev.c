@@ -127,6 +127,34 @@ done:
     return rc;
 }
 
+static int _GetN(
+    Blkdev* dev,
+    UINTN blkno,
+    UINTN nblocks,
+    void* data)
+{
+    int rc = -1;
+    BlkdevImpl* impl = (BlkdevImpl*)dev;
+
+    if (!impl || !data || !impl->bio)
+        goto done;
+
+    if (!nblocks)
+    {
+        rc = 0;
+        goto done;
+    }
+
+    if (ReadBIO(impl->bio, blkno, data, nblocks * BLKDEV_BLKSIZE) != EFI_SUCCESS)
+        goto done;
+
+    rc = 0;
+
+done:
+    return rc;
+}
+
+
 static int _Put(
     Blkdev* dev,
     UINTN blkno,
@@ -139,6 +167,33 @@ static int _Put(
         goto done;
 
     if (WriteBIO(impl->bio, blkno, data, BLKDEV_BLKSIZE) != EFI_SUCCESS)
+        goto done;
+
+    rc = 0;
+
+done:
+    return rc;
+}
+
+static int _PutN(
+    Blkdev* dev,
+    UINTN blkno,
+    UINTN nblocks,
+    const void* data)
+{
+    int rc = -1;
+    BlkdevImpl* impl = (BlkdevImpl*)dev;
+
+    if (!impl || !data || !impl->bio)
+        goto done;
+
+    if (!nblocks)
+    {
+        rc = 0;
+        goto done;
+    }
+
+    if (WriteBIO(impl->bio, blkno, data, nblocks * BLKDEV_BLKSIZE) != EFI_SUCCESS)
         goto done;
 
     rc = 0;
@@ -168,7 +223,9 @@ Blkdev* BlkdevFromBIO(
 
     impl->base.Close = _Close;
     impl->base.Get = _Get;
+    impl->base.GetN = _GetN;
     impl->base.Put = _Put;
+    impl->base.PutN = _PutN;
     impl->base.SetFlags = _SetFlags;
     impl->bio = bio;
 

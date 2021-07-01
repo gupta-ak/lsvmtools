@@ -54,6 +54,18 @@ struct _Blkdev
         UINTN blkno,
         const void* data);
 
+    int (*GetN)(
+        Blkdev* dev,
+        UINTN blkno,
+        UINTN nblks,
+        void* data);
+
+    int (*PutN)(
+        Blkdev* dev,
+        UINTN blkno,
+        UINTN nblks,
+        const void* data);
+
     int (*SetFlags)(
         Blkdev* dev,
         UINT32 flags);
