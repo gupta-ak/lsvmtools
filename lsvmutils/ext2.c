@@ -628,7 +628,8 @@ static EXT2Err _ReadBlocks(
     const EXT2* ext2,
     UINT32 blkno,
     UINT32 nblks,
-    Buf* buf)
+    Buf* buf,
+    int dump_blocks)
 {
     EXT2_DECLARE_ERR(err);
     UINT32 bytes;
@@ -644,8 +645,18 @@ static EXT2Err _ReadBlocks(
     {
         bytes = nblks * ext2->block_size;
 
+        if (dump_blocks)
+        {
+            PRINTF("_ReadBlocks::BufReserve: %lld %lld\n", buf->size, buf->size + bytes);
+        }
+
         if (BufReserve(buf, buf->size + bytes) != 0)
             GOTO(done);
+    }
+    
+    if (dump_blocks)
+    {
+        PRINTF("_ReadBlocks::_Read: %lld\n", bytes);
     }
 
     /* Read the blocks */
@@ -660,6 +671,11 @@ static EXT2Err _ReadBlocks(
     }
 
     buf->size += bytes;
+ 
+    if (dump_blocks)
+    {
+        PRINTF("_ReadBlocks::done: %lld\n", bytes);
+    }
 
     err = EXT2_ERR_NONE;
 
@@ -2565,6 +2581,7 @@ EXT2Err EXT2LoadFileFromInode(
     BufU32 blknos = BUF_U32_INITIALIZER;
     Buf buf = BUF_INITIALIZER;
     UINT32 i;
+    int dump_blocks = 0;
 
     /* Check parameters */
     if (!EXT2Valid(ext2) || !inode || !data || !size)
@@ -2587,7 +2604,19 @@ EXT2Err EXT2LoadFileFromInode(
         GOTO(done);
     }
 
+    if (blknos.size > 1000)
+    {
+        dump_blocks = 1;
+    }
+
+    if (dump_blocks)
+    {
+        PRINTF("ext2loadfile: blocks loaded from inode: %lld\n", blknos.size);
+    }
+
     /* Read and append each block */
+	int bufappends = 0;
+	int bufreserve = 0;
     for (i = 0; i < blknos.size; )
     {
         UINT32 nblks = 1;
@@ -2614,16 +2643,24 @@ EXT2Err EXT2LoadFileFromInode(
             /* Append block to end of buffer */
             if (EXT2_IFERR(err = BufAppend(&buf, block.data, block.size)))
                 GOTO(done);
+
+		bufappends++;
         }
         else
         {
-            if (EXT2_IFERR(_ReadBlocks(ext2, blknos.data[i], nblks, &buf)))
+            if (EXT2_IFERR(_ReadBlocks(ext2, blknos.data[i], nblks, &buf, dump_blocks)))
             {
                 GOTO(done);
             }
+		bufreserve++;
         }
 
         i += nblks;
+    }
+
+    if (dump_blocks)
+    {
+        PRINTF("append: %d. reserve: %d\n", bufappends, bufreserve);
     }
 
     *data = buf.data;

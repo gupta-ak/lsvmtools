@@ -376,7 +376,7 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
         }
     }
 
-#if 0
+#if 1
     /* Print cachedev stats */
     if (globals.cachedev)
     {
