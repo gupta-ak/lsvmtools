@@ -87,6 +87,7 @@ static int _GetN(
     UINTN toRead = nblocks * BLKDEV_BLKSIZE;
     UINT8* tmp = NULL;
     Blkdev* rawdev;
+    UINTN startBlkno;
 
     if (!_ValidLUKSBlkdev(dev) || !data || !impl->rawdev || !impl->masterkey)
         goto done;
@@ -103,7 +104,8 @@ static int _GetN(
         goto done;
 
     rawdev = impl->rawdev;
-    if (rawdev->GetN(rawdev, blkno, nblocks, tmp) != 0)
+    startBlkno = impl->header.payload_offset + blkno;
+    if (rawdev->GetN(rawdev, startBlkno, nblocks, tmp) != 0)
         goto done;
 
     /* Call LUKS function to decrypt the data. */
@@ -147,6 +149,7 @@ static int _PutN(
     UINTN toWrite = nblocks * BLKDEV_BLKSIZE;
     UINT8* tmp = NULL;
     Blkdev* rawdev;
+    UINTN startBlkno;
 
     if (!_ValidLUKSBlkdev(dev) || !data || !impl->rawdev || !impl->masterkey)
     {
@@ -178,7 +181,8 @@ static int _PutN(
 
     /* Write the encrypted data to the device. */
     rawdev = impl->rawdev;
-    if (rawdev->PutN(rawdev, blkno, nblocks, tmp) != 0)
+    startBlkno = impl->header.payload_offset + blkno;
+    if (rawdev->PutN(rawdev, startBlkno, nblocks, tmp) != 0)
         goto done; 
 
     rc = 0;
