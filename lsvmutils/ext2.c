@@ -140,6 +140,29 @@ static void _HexDump(
 typedef unsigned long ssize_t;
 #endif
 
+static ssize_t _ReadPartialBlock(
+    Blkdev* dev,
+    UINTN blkno,
+    size_t offset,
+    size_t size,
+    void* data)
+{
+    UINT8 blk[BLKDEV_BLKSIZE];
+    UINT32 off; /* offset into this block */
+    UINT32 len; /* bytes to read from this block */
+    
+    if (!size)
+        return 0;
+
+    if (dev->Get(dev, blkno, blk) != 0)
+        return -1;
+
+    off = offset % BLKDEV_BLKSIZE;
+    len = _Min(BLKDEV_BLKSIZE - off, size);
+    Memcpy(data, &blk[off], len);
+    return len;
+}
+
 static ssize_t _Read(
     Blkdev* dev,
     size_t offset,
@@ -147,39 +170,40 @@ static ssize_t _Read(
     size_t size)
 {
     UINT32 blkno;
-    UINT32 i;
+    UINT32 nblocks;
     UINT32 rem;
     UINT8* ptr;
+    ssize_t bytesRead;
 
     if (!dev || !data)
         return -1;
 
     blkno = offset / BLKDEV_BLKSIZE;
+    rem = size;
+    ptr = data;
 
-    for (i = blkno, rem = size, ptr = (UINT8*)data; rem; i++)
-    {
-        UINT8 blk[BLKDEV_BLKSIZE];
-        UINT32 off; /* offset into this block */
-        UINT32 len; /* bytes to read from this block */
+    /* First block might be unaligned. */
+    bytesRead = _ReadPartialBlock(dev, blkno, offset, rem, ptr);
+    if (bytesRead < 0)
+        return -1;
 
-        if (dev->Get(dev, i, blk) != 0)
-            return -1;
+    blkno++;
+    rem -= bytesRead;
+    ptr += bytesRead;
 
-        /* If first block */
-        if (i == blkno)
-            off = offset % BLKDEV_BLKSIZE;
-        else
-            off = 0;
+    /* Read the remaining blocks expect the last one. */
+    nblocks = rem / BLKDEV_BLKSIZE;
+    if (dev->GetN(dev, blkno, nblocks, ptr) != 0)
+        return -1;
 
-        len = BLKDEV_BLKSIZE - off;
+    blkno += nblocks;
+    rem -= nblocks * BLKDEV_BLKSIZE;
+    ptr += nblocks * BLKDEV_BLKSIZE;
 
-        if (len > rem)
-            len = rem;
-
-        Memcpy(ptr, &blk[off], len);
-        rem -= len;
-        ptr += len;
-    }
+    /* Read the last block, which also might be unaligned. */
+    bytesRead = _ReadPartialBlock(dev, blkno, 0, rem, ptr);
+    if (bytesRead < 0)
+        return -1;
 
     return size;
 }
