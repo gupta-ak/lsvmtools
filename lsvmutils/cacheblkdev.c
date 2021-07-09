@@ -178,13 +178,36 @@ static int _GetN(
 {
     int rc = -1;
     BlkdevImpl* impl = (BlkdevImpl*)dev;
+    UINTN i;
+    const Block* block;
 
     /* Check for null parameters */
     if (!impl || !data || !impl->child)
         goto done;
 
-    if (impl->child->GetN(impl->child, blkno, nblocks, data) != 0)
-	goto done;
+    /* Loop through and check if in cache. Otherwise, read from disk. */
+    for (i = 0; i < nblocks;)
+    {
+        UINTN j;
+
+        /* Loop through blocks and store retrieve from cache. */
+        while (i < nblocks && (block = _GetCache(impl, blkno + i)))
+        {
+            Memcpy(data + i, block->data, sizeof(block->data));
+            i++;
+        }
+
+        /* Find the next cached block to see how much we need to read. */
+        j = i;
+        while (j < nblocks && (!_GetCache(impl, blkno + j)))
+            j++;
+
+        /* Read as much as we can from the disk. */
+        if (impl->child->GetN(impl->child, blkno + i, j - i, data + i) != 0)
+            goto done;
+
+        i = j;
+    }
 
     rc = 0;
 
