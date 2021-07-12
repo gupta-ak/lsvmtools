@@ -106,7 +106,9 @@ static int _GetN(
     rawdev = impl->rawdev;
     startBlkno = impl->header.payload_offset + blkno;
 
-    PRINTF("LuksDev->GetN: %d %d\n", startBlkno, nblocks);
+    if (nblocks > 1)
+        PRINTF("LuksDev->GetN: %d %d\n", startBlkno, nblocks);
+
     if (rawdev->GetN(rawdev, startBlkno, nblocks, tmp) != 0)
         goto done;
 
@@ -169,7 +171,9 @@ static int _PutN(
     if (!tmp)
         goto done;
 
-    PRINTF("PutN->LuksCrypt: %d %d, %d\n", blkno, nblocks, toWrite);
+    if (nblocks > 1)
+        PRINTF("PutN->LuksCrypt: %d %d, %d\n", blkno, nblocks, toWrite);
+
     if (LUKSCrypt(
         LUKS_CRYPT_MODE_ENCRYPT,
         &impl->header,
@@ -182,7 +186,9 @@ static int _PutN(
         goto done;
     }
 
-    PRINTF("PUTN_>putN: %d %d\n", blkno, nblocks);
+    if (nblocks > 1)
+        PRINTF("PUTN_>putN: %d %d\n", blkno, nblocks);
+
     /* Write the encrypted data to the device. */
     rawdev = impl->rawdev;
     startBlkno = impl->header.payload_offset + blkno;
@@ -297,8 +303,6 @@ Blkdev* LUKSBlkdevFromRawBytes(
     if (!(impl = (BlkdevImpl*)Calloc(1, sizeof(BlkdevImpl))))
         goto done;
    
-    LUKSDumpHeader(&header);
-    
     /* Initialize the block device */
     impl->base.Close = _Close;
     impl->base.Get = _Get;
