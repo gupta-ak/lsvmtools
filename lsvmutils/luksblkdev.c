@@ -294,7 +294,9 @@ Blkdev* LUKSBlkdevFromRawBytes(
     /* Allocate the block device */
     if (!(impl = (BlkdevImpl*)Calloc(1, sizeof(BlkdevImpl))))
         goto done;
-
+   
+    LUKSDumpHeader(&header);
+    
     /* Initialize the block device */
     impl->base.Close = _Close;
     impl->base.Get = _Get;

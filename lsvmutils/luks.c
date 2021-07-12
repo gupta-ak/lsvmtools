@@ -707,6 +707,7 @@ int LUKSPutPayloadSector(
         goto done;
 
     /* Decrypt the sector with the master key */
+    PRINTF("LUKSCrypt %d %d\n", LUKS_SECTOR_SIZE, sectorNumber);
     if (LUKSCrypt(
         LUKS_CRYPT_MODE_ENCRYPT,
         header,
