@@ -142,34 +142,6 @@ done:
     return rc;
 }
 
-static int _Get(
-    Blkdev* dev,
-    UINTN blkno,
-    void* data)
-{
-    int rc = -1;
-    BlkdevImpl* impl = (BlkdevImpl*)dev;
-    const Block* block;
-
-    /* Check for null parameters */
-    if (!impl || !data || !impl->child)
-        goto done;
-
-    if ((block = _GetCache(impl, blkno)))
-    {
-        Memcpy(data, block->data, sizeof(block->data));
-    }
-    else if (impl->child->Get(impl->child, blkno, data) != 0)
-    {
-        goto done;
-    }
-
-    rc = 0;
-
-done:
-    return rc;
-}
-
 static int _GetN(
     Blkdev* dev,
     UINTN blkno,
@@ -179,8 +151,8 @@ static int _GetN(
     int rc = -1;
     BlkdevImpl* impl = (BlkdevImpl*)dev;
     UINTN i;
-    const Block* block;
-
+    UINT8* ptr = (UINT8*) data;
+    
     /* Check for null parameters */
     if (!impl || !data || !impl->child)
         goto done;
@@ -189,11 +161,13 @@ static int _GetN(
     for (i = 0; i < nblocks;)
     {
         UINTN j;
+        const Block* block;
 
-        /* Loop through blocks and store retrieve from cache. */
+        /* Loop through blocks and retrieve from cache. */
         while (i < nblocks && (block = _GetCache(impl, blkno + i)))
         {
-            Memcpy(data + i, block->data, sizeof(block->data));
+            Memcpy(
+                ptr + i*sizeof(block->data), block->data, sizeof(block->data));
             i++;
         }
 
@@ -203,10 +177,75 @@ static int _GetN(
             j++;
 
         /* Read as much as we can from the disk. */
-        if (impl->child->GetN(impl->child, blkno + i, j - i, data + i) != 0)
+        PRINTF("Cachedev: GETN: %d %d %d %d\n", blkno, i, nblocks, j);
+        if (impl->child->GetN(
+                impl->child,
+                blkno + i,
+                j - i,
+                ptr + i*sizeof(block->data)) != 0)
+        {
             goto done;
+        }
 
         i = j;
+    }
+
+    PRINTF0("cachdev: GetN DONE\n");
+    rc = 0;
+
+done:
+    return rc;
+}
+
+static int _Get(
+    Blkdev* dev,
+    UINTN blkno,
+    void* data)
+{
+    return _GetN(dev, blkno, 1, data);
+}
+
+static int _PutN(
+    Blkdev* dev,
+    UINTN blkno,
+    UINTN nblocks,
+    const void* data)
+{
+    int rc = -1;
+    BlkdevImpl* impl = (BlkdevImpl*)dev;
+
+    /* Check for null parameters */
+    if (!impl || !data || !impl->child)
+        goto done;
+
+    PRINTF("Cachedev:: _PutN: %d %d\n", blkno, nblocks);
+    /* If caching is enabled, change cache, but not disk */
+    if (impl->flags & BLKDEV_ENABLE_CACHING)
+    {
+        UINTN i;
+        Block* block;
+        const UINT8* ptr = (const UINT8*) data;
+
+        for (i = 0; i < nblocks; i++)
+        {
+            if ((block = _GetCache(impl, blkno + i)))
+            {
+                Memcpy(block->data, ptr, sizeof(block->data));
+            }
+            else if (_PutCache(impl, blkno + i, ptr) != 0)
+            {
+                goto done;
+            }
+            ptr += sizeof(block->data);
+        }
+    }
+    else
+    {
+        /* If control reaches here, then disk will be modified */
+        if (impl->child->PutN(impl->child, blkno, nblocks, data) != 0)
+        {
+            goto done;
+        }
     }
 
     rc = 0;
@@ -220,59 +259,7 @@ static int _Put(
     UINTN blkno,
     const void* data)
 {
-    int rc = -1;
-    BlkdevImpl* impl = (BlkdevImpl*)dev;
-
-    /* Check for null parameters */
-    if (!impl || !data || !impl->child)
-        goto done;
-
-    /* If caching is enabled, change cache, but not disk */
-    if (impl->flags & BLKDEV_ENABLE_CACHING)
-    {
-        Block* block;
-
-        if ((block = _GetCache(impl, blkno)))
-        {
-            Memcpy(block->data, data, sizeof(block->data));
-        }
-        else if (_PutCache(impl, blkno, data) != 0)
-        {
-            goto done;
-        }
-    }
-    else
-    {
-        /* If control reaches here, then disk will be modified */
-
-        if (impl->child->Put(impl->child, blkno, data) != 0)
-        {
-            goto done;
-        }
-    }
-
-    rc = 0;
-
-done:
-    return rc;
-}
-
-static int _PutN(
-    Blkdev* dev,
-    UINTN blkno,
-    UINTN nblocks,
-    const void* data)
-{
-    UINTN i;
-    const UINT8* ptr = (const UINT8*) ptr;
-
-    for (i = 0; i < nblocks; i++)
-    {
-        if (_Put(dev, blkno + i, ptr + i*BLKDEV_BLKSIZE) != 0)
-            return -1;
-    }
-
-    return 0;
+    return _PutN(dev, blkno, 1, data);
 }
 
 

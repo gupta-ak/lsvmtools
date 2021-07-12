@@ -105,6 +105,8 @@ static int _GetN(
 
     rawdev = impl->rawdev;
     startBlkno = impl->header.payload_offset + blkno;
+
+    PRINTF("LuksDev->GetN: %d %d\n", startBlkno, nblocks);
     if (rawdev->GetN(rawdev, startBlkno, nblocks, tmp) != 0)
         goto done;
 
