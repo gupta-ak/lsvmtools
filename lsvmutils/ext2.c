@@ -61,7 +61,7 @@
 
 #define TRACE printf("TRACE: %s(%u)\n", __FILE__, __LINE__)
 
-#if 0
+#if 1 
 #define TRACE_GOTOS
 #endif
 
@@ -232,7 +232,10 @@ static ssize_t _Write(
 
         /* Fetch the block */
         if (dev->Get(dev, i, blk) != 0)
+        {
+            PRINTF("_Write dev->Get failed %d %d\n", blkno, i);
             return -1;
+        }
 
         /* If first block */
         if (i == blkno)
@@ -251,7 +254,10 @@ static ssize_t _Write(
 
         /* Rewrite the block */
         if (dev->Put(dev, i, blk) != 0)
+        {
+            PRINTF("_Write dev->Put failed %d %d\n", blkno, i);
             return -1;
+        }
     }
 
     return size;
@@ -3835,7 +3841,7 @@ EXT2Err EXT2Rm(
     /* Truncate the file first */
     if (EXT2_IFERR(err = EXT2Trunc(ext2, path)))
     {
-        goto done;
+        GOTO(done);
     }
 
     /* Split the path */
