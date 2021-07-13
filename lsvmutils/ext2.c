@@ -259,14 +259,14 @@ static ssize_t _Write(
 
     /* First block might be unaligned. */
     bytesWritten = _WritePartialBlock(dev, blkno, offset, rem, ptr);
-    if (bytesRead < 0)
+    if (bytesWritten < 0)
         return -1;
 
     blkno++;
     rem -= bytesWritten;
     ptr += bytesWritten;
 
-    /* Read the remaining blocks expect the last one. */
+    /* Write the remaining blocks expect the last one. */
     nblocks = rem / BLKDEV_BLKSIZE;
     if (dev->PutN(dev, blkno, nblocks, ptr) != 0)
         return -1;
@@ -275,7 +275,7 @@ static ssize_t _Write(
     rem -= nblocks * BLKDEV_BLKSIZE;
     ptr += nblocks * BLKDEV_BLKSIZE;
 
-    /* Read the last block, which also might be unaligned. */
+    /* Write the last block, which also might be unaligned. */
     bytesWritten = _WritePartialBlock(dev, blkno, 0, rem, ptr);
     if (bytesWritten < 0)
         return -1;
