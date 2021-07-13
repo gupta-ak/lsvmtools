@@ -163,6 +163,36 @@ static ssize_t _ReadPartialBlock(
     return len;
 }
 
+static ssize_t _WritePartialBlock(
+   Blkdev* dev,
+   UINTN blkno,
+   ssize_t offset,
+   size_t size,
+   const void* data)
+{
+    UINT8 blk[BLKDEV_BLKSIZE];
+    UINT32 off; /* offset into this block */
+    UINT32 len; /* bytes to read from this block */
+    
+    if (!size)
+        return 0;
+    
+    /* Fetch the block */
+    if (dev->Get(dev, blkno, blk) != 0)
+        return -1;
+
+    /* Replace the specified data in the block. */
+    off = offset % BLKDEV_BLKSIZE;
+    len = _Min(BLKDEV_BLKSIZE - off, size);
+    Memcpy(&blk[off], data, len);
+
+    /* Rewrite the block */
+    if (dev->Put(dev, blkno, blk) != 0)
+        return -1;
+
+    return len;
+}
+
 static ssize_t _Read(
     Blkdev* dev,
     size_t offset,
@@ -215,50 +245,40 @@ static ssize_t _Write(
     size_t size)
 {
     UINT32 blkno;
-    UINT32 i;
+    UINT32 nblocks;
     UINT32 rem;
-    UINT8* ptr;
+    const UINT8* ptr;
+    ssize_t bytesWritten;
 
     if (!dev || !data)
         return -1;
 
     blkno = offset / BLKDEV_BLKSIZE;
+    rem = size;
+    ptr = data;   
 
-    for (i = blkno, rem = size, ptr = (UINT8*)data; rem; i++)
-    {
-        UINT8 blk[BLKDEV_BLKSIZE];
-        UINT32 off; /* offset into this block */
-        UINT32 len; /* bytes to write from this block */
+    /* First block might be unaligned. */
+    bytesWritten = _WritePartialBlock(dev, blkno, offset, rem, ptr);
+    if (bytesRead < 0)
+        return -1;
 
-        /* Fetch the block */
-        if (dev->Get(dev, i, blk) != 0)
-        {
-            PRINTF("_Write dev->Get failed %d %d\n", blkno, i);
-            return -1;
-        }
+    blkno++;
+    rem -= bytesWritten;
+    ptr += bytesWritten;
 
-        /* If first block */
-        if (i == blkno)
-            off = offset % BLKDEV_BLKSIZE;
-        else
-            off = 0;
+    /* Read the remaining blocks expect the last one. */
+    nblocks = rem / BLKDEV_BLKSIZE;
+    if (dev->PutN(dev, blkno, nblocks, ptr) != 0)
+        return -1;
 
-        len = BLKDEV_BLKSIZE - off;
+    blkno += nblocks;
+    rem -= nblocks * BLKDEV_BLKSIZE;
+    ptr += nblocks * BLKDEV_BLKSIZE;
 
-        if (len > rem)
-            len = rem;
-
-        Memcpy(&blk[off], ptr, len);
-        rem -= len;
-        ptr += len;
-
-        /* Rewrite the block */
-        if (dev->Put(dev, i, blk) != 0)
-        {
-            PRINTF("_Write dev->Put failed %d %d\n", blkno, i);
-            return -1;
-        }
-    }
+    /* Read the last block, which also might be unaligned. */
+    bytesWritten = _WritePartialBlock(dev, blkno, 0, rem, ptr);
+    if (bytesWritten < 0)
+        return -1;
 
     return size;
 }
