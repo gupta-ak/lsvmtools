@@ -50,6 +50,8 @@ struct _BlkdevImpl
     Blkdev* child;
     Block* chains[MAX_CHAINS];
     UINT32 flags; /* BLKDEV_ENABLE_CACHING supported */
+    UINT32 get[100];
+    UINT32 put[100];
 };
 
 static void _ReleaseCache(
@@ -189,6 +191,12 @@ static int _GetN(
         i = j;
     }
 
+    if (nblocks >= 100) {
+        impl->get[99]++;
+    } else {
+         impl->get[nblocks]++;
+    }
+
     rc = 0;
 
 done:
@@ -243,6 +251,12 @@ static int _PutN(
         {
             goto done;
         }
+    }
+
+    if (nblocks >= 100) {
+        impl->put[99]++;
+    } else {
+         impl->put[nblocks]++;
     }
 
     rc = 0;
@@ -311,7 +325,9 @@ void CacheBlkdevStats(
     UINTN* numBlocks,
     UINTN* numChains,
     UINTN* maxChains,
-    UINTN* longestChain)
+    UINTN* longestChain,
+    UINT32* getmap,
+    UINT32* putmap)
 {
     BlkdevImpl* impl = (BlkdevImpl*)dev;
     UINTN i;
@@ -338,4 +354,7 @@ void CacheBlkdevStats(
         if (n > *longestChain)
             (*longestChain)++;
     }
+
+    Memcpy(getmap, impl->get, sizeof(impl->get));
+    Memcpy(putmap, impl->put, sizeof(impl->put));
 }

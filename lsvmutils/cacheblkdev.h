@@ -41,6 +41,8 @@ void CacheBlkdevStats(
     UINTN* numBlocks,
     UINTN* numChains,
     UINTN* maxChains,
-    UINTN* longestChain);
+    UINTN* longestChain,
+    UINT32* getmap,
+    UINT32* setmap);
 
 #endif /* _cacheblkdev_h */

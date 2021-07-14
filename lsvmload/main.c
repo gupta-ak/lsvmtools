@@ -376,7 +376,7 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
         }
     }
 
-#if 0
+#if 1
     /* Print cachedev stats */
     if (globals.cachedev)
     {
@@ -384,18 +384,35 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
         UINTN numChains;
         UINTN maxChains;
         UINTN longestChain;
+        UINT32 get[100];
+        UINT32 set[100];
+        UINTN i;
 
         CacheBlkdevStats(
             globals.cachedev, 
             &numBlocks, 
             &numChains, 
             &maxChains, 
-            &longestChain);
+            &longestChain,
+            get,
+            set);
 
         Print(L"numBlocks: %ld\n", (long)numBlocks);
         Print(L"numChains: %ld\n", (long)numChains);
         Print(L"maxChains: %ld\n", (long)maxChains);
         Print(L"longestChains: %ld\n", (long)longestChain);
+
+        LOGI(L"===========GETMAP============\n");
+        for (i = 0; i < 100; i++)
+        {
+            LOGI(L"[%d]: %d\n", i, get[i]);
+        }
+        LOGI(L"===========SETMAP=============\n");
+        for (i = 0; i < 100; i++)
+        {
+            LOGI(L"[%d]: %d\n", i, set[i]);
+        }
+
         Wait();
     }
 #endif

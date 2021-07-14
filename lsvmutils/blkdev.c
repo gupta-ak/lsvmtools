@@ -40,9 +40,9 @@ int BlkdevRead(
 {
     int rc = -1;
     UINTN nblocks;
-    UINTN i;
     UINT8* ptr;
     UINTN rem;
+    UINT8 block[BLKDEV_BLKSIZE];
 
     if (!dev || !data)
         goto done;
@@ -50,21 +50,25 @@ int BlkdevRead(
     nblocks = (size + BLKDEV_BLKSIZE - 1) / BLKDEV_BLKSIZE;
     ptr = (UINT8*)data;
     rem = size;
-
-    for (i = blkno; rem > 0 && i < blkno + nblocks; i++)
+    
+    if (nblocks == 0)
     {
-        UINT8 block[BLKDEV_BLKSIZE];
-        UINTN n;
-
-        if (dev->Get(dev, i, block) != 0)
-            goto done;
-
-        n = rem < BLKDEV_BLKSIZE ? rem : BLKDEV_BLKSIZE;
-
-        Memcpy(ptr, block, n);
-        ptr += n;
-        rem -= n;
+        rc = 0;
+        goto done;
     }
+
+    /* Read nblocks - 1 blocks, which all are aligned. */
+    if (dev->GetN(dev, blkno, nblocks - 1, ptr) != 0)
+        goto done;
+
+    /* Read the last block and copy the remaining bytes to ptr. */
+    ptr += (nblocks - 1) * BLKDEV_BLKSIZE;
+    rem -= (nblocks - 1) * BLKDEV_BLKSIZE;
+
+    if (dev->Get(dev, blkno + nblocks - 1, block) != 0)
+        goto done;
+
+    Memcpy(ptr, block, rem);
 
     rc = 0;
 
