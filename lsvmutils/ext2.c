@@ -212,16 +212,19 @@ static ssize_t _Read(
     rem = size;
     ptr = data;
 
-    /* First block might be unaligned. */
-    bytesRead = _ReadPartialBlock(dev, blkno, offset, rem, ptr);
-    if (bytesRead < 0)
-        return -1;
+    /* Handle the special case if offset is unaligned to the sector. */
+    if (offset % BLKDEV_BLKSIZE != 0)
+    {
+        bytesRead = _ReadPartialBlock(dev, blkno, offset, rem, ptr);
+        if (bytesRead < 0)
+            return -1;
 
-    blkno++;
-    rem -= bytesRead;
-    ptr += bytesRead;
+        blkno++;
+        rem -= bytesRead;
+        ptr += bytesRead;
+    }
 
-    /* Read the remaining blocks expect the last one. */
+    /* Read the remaining full blocks. */
     nblocks = rem / BLKDEV_BLKSIZE;
     if (dev->GetN(dev, blkno, nblocks, ptr) != 0)
         return -1;
@@ -230,7 +233,7 @@ static ssize_t _Read(
     rem -= nblocks * BLKDEV_BLKSIZE;
     ptr += nblocks * BLKDEV_BLKSIZE;
 
-    /* Read the last block, which also might be unaligned. */
+    /* Read the last partial block if needed. */
     bytesRead = _ReadPartialBlock(dev, blkno, 0, rem, ptr);
     if (bytesRead < 0)
         return -1;
@@ -257,16 +260,19 @@ static ssize_t _Write(
     rem = size;
     ptr = data;   
 
-    /* First block might be unaligned. */
-    bytesWritten = _WritePartialBlock(dev, blkno, offset, rem, ptr);
-    if (bytesWritten < 0)
-        return -1;
+    /* Handle the special case if offset is not aligned to sector. */
+    if (offset % BLKDEV_BLKSIZE != 0)
+    {
+        bytesWritten = _WritePartialBlock(dev, blkno, offset, rem, ptr);
+        if (bytesWritten < 0)
+            return -1;
 
-    blkno++;
-    rem -= bytesWritten;
-    ptr += bytesWritten;
+        blkno++;
+        rem -= bytesWritten;
+        ptr += bytesWritten;
+    }
 
-    /* Write the remaining blocks expect the last one. */
+    /* Write the remaining blocks full blocks. */
     nblocks = rem / BLKDEV_BLKSIZE;
     if (dev->PutN(dev, blkno, nblocks, ptr) != 0)
         return -1;
@@ -275,7 +281,7 @@ static ssize_t _Write(
     rem -= nblocks * BLKDEV_BLKSIZE;
     ptr += nblocks * BLKDEV_BLKSIZE;
 
-    /* Write the last block, which also might be unaligned. */
+    /* Write the partial block if needed. */
     bytesWritten = _WritePartialBlock(dev, blkno, 0, rem, ptr);
     if (bytesWritten < 0)
         return -1;
@@ -4614,6 +4620,8 @@ EXT2Err EXT2Put(
         GOTO(done);
     }
 
+    PRINTF0("Ext2put:start\n");
+
     /* Reject attempts to copy directories */
     if (mode & EXT2_S_IFDIR)
     {
@@ -4648,10 +4656,12 @@ EXT2Err EXT2Put(
         }
     }
 
+    PRINTF0("Ext2put:writefile\n");
     /* Write the blocks of the file */
     if (EXT2_IFERR(err = _WriteData(ext2, data, size, &blknos)))
         GOTO(done);
 
+    PRINTF0("ext2put::createfileinode\n");
     /* Create an inode for this new file */
     if (EXT2_IFERR(err = _CreateFileInode(
         ext2, 
@@ -4696,6 +4706,7 @@ EXT2Err EXT2Put(
         GOTO(done);
     }
 
+    PRINTF0("Ext2put:done\n");
     err = EXT2_ERR_NONE;
 
 done:

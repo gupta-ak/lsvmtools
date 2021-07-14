@@ -402,17 +402,18 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
         Print(L"maxChains: %ld\n", (long)maxChains);
         Print(L"longestChains: %ld\n", (long)longestChain);
 
-        LOGI(L"===========GETMAP============\n");
+        LOGI(L"===========GETMAP============");
+        for (i = 0; i < 100; i++)
+        {   
+            if (get[i] != 0)
+                LOGI(L"[%d]: %d", i, get[i]);
+        }
+        LOGI(L"===========SETMAP=============");
         for (i = 0; i < 100; i++)
         {
-            LOGI(L"[%d]: %d\n", i, get[i]);
+            if (set[i] != 0)
+                LOGI(L"[%d]: %d", i, set[i]);
         }
-        LOGI(L"===========SETMAP=============\n");
-        for (i = 0; i < 100; i++)
-        {
-            LOGI(L"[%d]: %d\n", i, set[i]);
-        }
-
         Wait();
     }
 #endif
