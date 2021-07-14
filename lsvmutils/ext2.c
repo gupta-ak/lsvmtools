@@ -2656,7 +2656,7 @@ EXT2Err EXT2LoadFileFromInode(
 
     if (blknos.size > 1000)
     {
-        dump_blocks = 1;
+        dump_blocks = 0;
     }
 
     if (dump_blocks)

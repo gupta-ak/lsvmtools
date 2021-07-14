@@ -106,9 +106,6 @@ static int _GetN(
     rawdev = impl->rawdev;
     startBlkno = impl->header.payload_offset + blkno;
 
-    if (nblocks > 1)
-        PRINTF("LuksDev->GetN: %d %d\n", startBlkno, nblocks);
-
     if (rawdev->GetN(rawdev, startBlkno, nblocks, tmp) != 0)
         goto done;
 
@@ -171,9 +168,6 @@ static int _PutN(
     if (!tmp)
         goto done;
 
-    if (nblocks > 1)
-        PRINTF("PutN->LuksCrypt: %d %d, %d\n", blkno, nblocks, toWrite);
-
     if (LUKSCrypt(
         LUKS_CRYPT_MODE_ENCRYPT,
         &impl->header,
@@ -185,9 +179,6 @@ static int _PutN(
     {
         goto done;
     }
-
-    if (nblocks > 1)
-        PRINTF("PUTN_>putN: %d %d\n", blkno, nblocks);
 
     /* Write the encrypted data to the device. */
     rawdev = impl->rawdev;

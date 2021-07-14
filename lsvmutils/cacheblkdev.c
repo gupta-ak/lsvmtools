@@ -177,9 +177,6 @@ static int _GetN(
             j++;
 
         /* Read as much as we can from the disk. */
-        if (nblocks > 1)
-            PRINTF("Cachedev: GETN: %d %d %d %d\n", blkno, i, nblocks, j);
-
         if (impl->child->GetN(
                 impl->child,
                 blkno + i,
@@ -218,9 +215,6 @@ static int _PutN(
     /* Check for null parameters */
     if (!impl || !data || !impl->child)
         goto done;
-
-    if (nblocks > 1)
-        PRINTF("Cachedev:: _PutN: %d %d\n", blkno, nblocks);
 
     /* If caching is enabled, change cache, but not disk */
     if (impl->flags & BLKDEV_ENABLE_CACHING)
