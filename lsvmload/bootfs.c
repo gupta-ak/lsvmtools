@@ -103,6 +103,7 @@ Blkdev* GetBootDevice(
 LOGI(L"getbootdevice::luksrawbytes;;end");
 
     globals.bootbio = bio;
+    globals.rawdev = rawdev;
     globals.cachedev = cachedev;
     globals.bootdev = bootdev;
 

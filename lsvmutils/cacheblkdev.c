@@ -178,6 +178,10 @@ static int _GetN(
         while (j < nblocks && (!_GetCache(impl, blkno + j)))
             j++;
 
+        /* Skip if we don't need to ready anything. */
+        if (j == i)
+            continue;
+
         /* Read as much as we can from the disk. */
         if (impl->child->GetN(
                 impl->child,
@@ -188,14 +192,15 @@ static int _GetN(
             goto done;
         }
 
+        if (j - i >= 100) {
+            impl->get[99]++;
+        } else {
+            impl->get[j-i]++;
+        }
+
         i = j;
     }
 
-    if (nblocks >= 100) {
-        impl->get[99]++;
-    } else {
-         impl->get[nblocks]++;
-    }
 
     rc = 0;
 
@@ -246,17 +251,17 @@ static int _PutN(
     }
     else
     {
+        if (nblocks >= 100) {
+            impl->put[99]++;
+        } else {
+            impl->put[nblocks]++;
+        }
+
         /* If control reaches here, then disk will be modified */
         if (impl->child->PutN(impl->child, blkno, nblocks, data) != 0)
         {
             goto done;
         }
-    }
-
-    if (nblocks >= 100) {
-        impl->put[99]++;
-    } else {
-         impl->put[nblocks]++;
     }
 
     rc = 0;

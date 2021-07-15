@@ -48,6 +48,10 @@ struct _BlkdevImpl
     Blkdev base;
     EFI_BIO* bio;
 
+    /* Stats */
+    UINT32 get[100];
+    UINT32 put[100];
+
     /* Cache */
     BOOLEAN cached;
     UINTN blkno;
@@ -113,6 +117,7 @@ static int _Get(
             impl->cached = TRUE;
             impl->blkno = blkno;
             Memcpy(data, impl->cache[0].data, BLKDEV_BLKSIZE);
+            impl->get[CACHE_SIZE]++;
             rc = 0;
             goto done;
         }
@@ -120,6 +125,8 @@ static int _Get(
 
     if (ReadBIO(impl->bio, blkno, data, BLKDEV_BLKSIZE) != EFI_SUCCESS)
         goto done;
+
+    impl->get[1]++;
 
     rc = 0;
 
@@ -145,29 +152,29 @@ static int _GetN(
         goto done;
     }
 
+    /* TODO: Revist this later. Do normal _Get on <= 8 sector reads to use the cache. */
+    if (nblocks <= CACHE_SIZE)
+    {
+        UINTN i;
+        UINT8* ptr = (UINT8*) data;
+        for (i = 0; i < nblocks; i++)
+        {
+            if (_Get(dev, blkno + i, ptr + i*BLKDEV_BLKSIZE) != 0)
+                goto done;
+        }
+
+        rc = 0;
+        goto done;
+    }
+
+    /* Otherwise, do a full block read. */
     if (ReadBIO(impl->bio, blkno, data, nblocks * BLKDEV_BLKSIZE) != EFI_SUCCESS)
         goto done;
 
-    rc = 0;
-
-done:
-    return rc;
-}
-
-
-static int _Put(
-    Blkdev* dev,
-    UINTN blkno,
-    const void* data)
-{
-    int rc = -1;
-    BlkdevImpl* impl = (BlkdevImpl*)dev;
-
-    if (!impl || !data || !impl->bio)
-        goto done;
-
-    if (WriteBIO(impl->bio, blkno, data, BLKDEV_BLKSIZE) != EFI_SUCCESS)
-        goto done;
+    if (nblocks >= 100)
+       impl->get[99]++;
+    else
+       impl->get[nblocks]++;
 
     rc = 0;
 
@@ -196,10 +203,23 @@ static int _PutN(
     if (WriteBIO(impl->bio, blkno, data, nblocks * BLKDEV_BLKSIZE) != EFI_SUCCESS)
         goto done;
 
+    if (nblocks >= 100)
+        impl->put[99]++;
+    else
+        impl->put[nblocks]++;
+
     rc = 0;
 
 done:
     return rc;
+}
+
+static int _Put(
+    Blkdev* dev,
+    UINTN blkno,
+    const void* data)
+{
+    return _PutN(dev, blkno, 1, data);
 }
 
 static int _SetFlags(
@@ -231,4 +251,14 @@ Blkdev* BlkdevFromBIO(
 
 done:
     return &impl->base;
+}
+
+void PrintBlkdevStats(
+    Blkdev* dev,
+    UINT32* get,
+    UINT32* put)
+{
+    BlkdevImpl* impl = (BlkdevImpl*)dev;
+    Memcpy(get, impl->get, sizeof(impl->get));
+    Memcpy(put, impl->put, sizeof(impl->put));
 }

@@ -37,6 +37,7 @@
 #include <lsvmutils/alloc.h>
 #include <lsvmutils/strings.h>
 #include <lsvmutils/cacheblkdev.h>
+#include <lsvmutils/efiblkdev.h>
 #include <xz/lzmaextras.h>
 #include <zlib/zlibextras.h>
 #include <time.h>
@@ -376,7 +377,7 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
         }
     }
 
-#if 1
+#if 0
     /* Print cachedev stats */
     if (globals.cachedev)
     {
@@ -384,8 +385,6 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
         UINTN numChains;
         UINTN maxChains;
         UINTN longestChain;
-        UINT32 get[100];
-        UINT32 set[100];
         UINTN i;
 
         CacheBlkdevStats(
@@ -401,6 +400,25 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
         Print(L"numChains: %ld\n", (long)numChains);
         Print(L"maxChains: %ld\n", (long)maxChains);
         Print(L"longestChains: %ld\n", (long)longestChain);
+        Wait();
+#endif
+    {
+        UINT32 get[100];
+        UINT32 set[100];
+        UINTN numBlocks;
+        UINTN numChains;
+        UINTN maxChains;
+        UINTN longestChain;
+        UINTN i;
+
+        CacheBlkdevStats(
+            globals.cachedev, 
+            &numBlocks, 
+            &numChains, 
+            &maxChains, 
+            &longestChain,
+            get,
+            set);
 
         LOGI(L"===========GETMAP============");
         for (i = 0; i < 100; i++)
@@ -414,9 +432,29 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
             if (set[i] != 0)
                 LOGI(L"[%d]: %d", i, set[i]);
         }
-        Wait();
     }
-#endif
+
+    /* Print boot bio stats. */
+    {
+        UINTN i;
+        UINT32 get[100];
+        UINT32 set[100];
+        
+        PrintBlkdevStats(globals.rawdev, get, set);
+
+        LOGI(L"===========RAW GETMAP============");
+        for (i = 0; i < 100; i++)
+        {   
+            if (get[i] != 0)
+                LOGI(L"[%d]: %d", i, get[i]);
+        }
+        LOGI(L"===========RAW SETMAP=============");
+        for (i = 0; i < 100; i++)
+        {
+            if (set[i] != 0)
+                LOGI(L"[%d]: %d", i, set[i]);
+        }
+    }        
 
     /* If this line was reached, measured boot worked */
     globals.measuredBootFailed = FALSE;

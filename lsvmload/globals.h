@@ -78,6 +78,9 @@ typedef struct _Globals
     /* Cache device that bootdev uses */
     Blkdev* cachedev;
 
+    /* The raw boot blkdev */
+    Blkdev* rawdev;
+
     /* Sealed keys */
     CHAR16* sealedKeysPath;
     TPM2X_BLOB sealedKeys;

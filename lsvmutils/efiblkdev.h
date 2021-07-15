@@ -37,4 +37,9 @@
 Blkdev* BlkdevFromBIO(
     EFI_BIO* bio);
 
+void PrintBlkdevStats(
+    Blkdev* blkdev,
+    UINT32* get,
+    UINT32* set);
+
 #endif /* _efiblkdev_h */
