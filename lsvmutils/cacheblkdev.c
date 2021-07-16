@@ -178,7 +178,7 @@ static int _GetN(
         while (j < nblocks && (!_GetCache(impl, blkno + j)))
             j++;
 
-        /* Skip if we don't need to ready anything. */
+        /* Skip if we don't need to read anything. */
         if (j == i)
             continue;
 
@@ -192,12 +192,23 @@ static int _GetN(
             goto done;
         }
 
+        /* If caching is enabled, then put into cache. */
+        if (impl->flags & BLKDEV_ENABLE_CACHING)
+        {
+            UINTN k;
+            for (k = i; k < j; k++)
+            {
+                if (_PutCache(impl, blkno + k, ptr + k*sizeof(block->data)) != 0)
+                    goto done;
+            }
+        }
+
+        /* Start next sequence. */
         if (j - i >= 100) {
             impl->get[99]++;
         } else {
             impl->get[j-i]++;
         }
-
         i = j;
     }
 
