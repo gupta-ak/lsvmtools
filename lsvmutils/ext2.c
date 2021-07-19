@@ -4620,8 +4620,6 @@ EXT2Err EXT2Put(
         GOTO(done);
     }
 
-    PRINTF0("Ext2put:start\n");
-
     /* Reject attempts to copy directories */
     if (mode & EXT2_S_IFDIR)
     {
@@ -4656,12 +4654,10 @@ EXT2Err EXT2Put(
         }
     }
 
-    PRINTF0("Ext2put:writefile\n");
     /* Write the blocks of the file */
     if (EXT2_IFERR(err = _WriteData(ext2, data, size, &blknos)))
         GOTO(done);
 
-    PRINTF0("ext2put::createfileinode\n");
     /* Create an inode for this new file */
     if (EXT2_IFERR(err = _CreateFileInode(
         ext2, 
@@ -4706,7 +4702,6 @@ EXT2Err EXT2Put(
         GOTO(done);
     }
 
-    PRINTF0("Ext2put:done\n");
     err = EXT2_ERR_NONE;
 
 done:

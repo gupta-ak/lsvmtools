@@ -385,8 +385,8 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
         UINTN numChains;
         UINTN maxChains;
         UINTN longestChain;
-        UINTN i;
-
+        UINT32 get[100];
+        UINT32 set[100];
         CacheBlkdevStats(
             globals.cachedev, 
             &numBlocks, 
@@ -401,7 +401,9 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
         Print(L"maxChains: %ld\n", (long)maxChains);
         Print(L"longestChains: %ld\n", (long)longestChain);
         Wait();
+    }
 #endif
+
     {
         UINT32 get[100];
         UINT32 set[100];
@@ -420,17 +422,17 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
             get,
             set);
 
-        LOGI(L"===========GETMAP============");
+        LOGD(L"===========GETMAP============");
         for (i = 0; i < 100; i++)
         {   
             if (get[i] != 0)
-                LOGI(L"[%d]: %d", i, get[i]);
+                LOGD(L"[%d]: %d", i, get[i]);
         }
-        LOGI(L"===========SETMAP=============");
+        LOGD(L"===========SETMAP=============");
         for (i = 0; i < 100; i++)
         {
             if (set[i] != 0)
-                LOGI(L"[%d]: %d", i, set[i]);
+                LOGD(L"[%d]: %d", i, set[i]);
         }
     }
 
@@ -442,17 +444,17 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
         
         PrintBlkdevStats(globals.rawdev, get, set);
 
-        LOGI(L"===========RAW GETMAP============");
+        LOGD(L"===========RAW GETMAP============");
         for (i = 0; i < 100; i++)
         {   
             if (get[i] != 0)
-                LOGI(L"[%d]: %d", i, get[i]);
+                LOGD(L"[%d]: %d", i, get[i]);
         }
-        LOGI(L"===========RAW SETMAP=============");
+        LOGD(L"===========RAW SETMAP=============");
         for (i = 0; i < 100; i++)
         {
             if (set[i] != 0)
-                LOGI(L"[%d]: %d", i, set[i]);
+                LOGD(L"[%d]: %d", i, set[i]);
         }
     }        
 

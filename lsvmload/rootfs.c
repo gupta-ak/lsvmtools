@@ -66,7 +66,7 @@ int TestRootDevice(
         goto done;
     }
 
-	LOGI(L"TestRootDevice::LUKSBlkdevFromRawBytes::start");
+    LOGD(L"TestRootDevice::LUKSBlkdevFromRawBytes");
     /* Wrap 'cache device' in 'LUKS device' */
     if (!(rootdev = LUKSBlkdevFromRawBytes(
         rawdev, 
@@ -76,7 +76,6 @@ int TestRootDevice(
         rawdev->Close(rawdev);
         goto done;
     }
-	LOGI(L"TestRootDevice::LUKSBLKdevFromRawBytes::end");
 
     /* Close the device */
     rootdev->Close(rootdev);

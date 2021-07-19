@@ -152,6 +152,8 @@ EFI_STATUS PutLog(
     CHAR16* wcs = NULL;
     char* str = NULL;
     const char *logLevelStr = LogLevelToStr(logLevel);
+    char num[32];
+    char* numStart = &num[sizeof(num)/sizeof(num[0])];
 
     /* Check log level */
     if (logLevel > _logLevel)
@@ -177,59 +179,52 @@ EFI_STATUS PutLog(
         va_end(ap);
     }
 
+    /* Get the time stamp to the log and convert to string. */
+    {
+	time_t t = time(NULL) - first;
+
+	/* Format is "[NUM]: ". Work our way backwards. */
+	*--numStart = '\0';
+	*--numStart = ' ';
+	*--numStart = ':';
+	*--numStart = ']';
+	do {
+		*--numStart = '0' + (t % 10);
+		t /= 10;
+	}
+	while (t > 0);
+	*--numStart = '[';
+    }
+
     /* Convert the string to single-character (ignore special characters) */
     {
+        /* Log format is "LOGLEVEL: [TIMESTAMP]: MSG" */
+        UINTN levelLen = Strlen(logLevelStr);
+        UINTN numLen = Strlen(numStart);
+        UINTN msgLen = StrLen(wcs);
         UINTN i;
-        UINTN len = StrLen(wcs);
 
-        if (!(str = Malloc(sizeof(char) * (len + 2))))
+        /* +2 for the ": " after LOGLEVEL and +2 for the ending "\n\0" */
+        if (!(str = Malloc(sizeof(char) * (levelLen + numLen + msgLen + 4))))
         {
             status = EFI_OUT_OF_RESOURCES;
             goto done;
         }
 
-        for (i = 0; i < len; i++)
-            str[i] = (char)wcs[i];
+        /* Copy the log level first. */
+        Memcpy(str, logLevelStr, levelLen);
+        str[levelLen] = ':';
+        str[levelLen+1] = ' ';
 
-        str[len] = '\n';
-        str[len+1] = '\0';
-    }
+        /* Now copy the time stamp. */
+        Memcpy(&str[levelLen+2], numStart, numLen);
 
-    /* Write the log level to the log */
-    {
-        if ((status = _WriteLog(logLevelStr)) != EFI_SUCCESS)
-        {
-            goto done;
-        }
+        /* Now copy the message string. */
+        for (i = 0; i < msgLen; i++)
+            str[levelLen + 2 + numLen + i] = (char)wcs[i];
 
-        if ((status = _WriteLog(": ")) != EFI_SUCCESS)
-        {
-            goto done;
-        }
-    }
-
-    /* Write the time stamp to the log */
-    {
-	char num[32];
-	char* start = &num[sizeof(num)/sizeof(num[0])];
-	time_t t = time(NULL) - first;
-
-	// format is "[NUM]: "
-	*--start = '\0';
-	*--start = ' ';
-	*--start = ':';
-	*--start = ']';
-	do {
-		*--start = '0' + (t % 10);
-		t /= 10;
-	}
-	while (t > 0);
-	*--start = '[';	
-
-	if ((status = _WriteLog(start)) != EFI_SUCCESS)
-	{
-		goto done;
-	}
+        str[levelLen + 2 + numLen + msgLen] = '\n';
+        str[levelLen + 2 + numLen + msgLen + 1] = '\0';
     }
 
     /* Write the string to the log */
